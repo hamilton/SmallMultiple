@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>index - iodide</title>
+<link rel="stylesheet" type="text/css" href="https://iodide-project.github.io/master/iodide.master.css">
+</head>
+<body>
+<script id="jsmd" type="text/jsmd">
+%% meta
+{
+  "title": "index",
+  "lastExport": "2018-04-07T17:20:51.454Z"
+}
+
+%% md
+# `mg-smallmultiple`
+
+A small library for displaying dashboard-style data graphics using `metrics-graphics`.
+
+%% resource
+https://cdnjs.cloudflare.com/ajax/libs/metrics-graphics/2.13.0/metricsgraphics.css
+https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js
+https://cdnjs.cloudflare.com/ajax/libs/metrics-graphics/2.13.0/metricsgraphics.js
+https://raw.githubusercontent.com/hamilton/ply.js/master/dist/ply.js
+
+%% js
+let URL = 'https://raw.githubusercontent.com/fivethirtyeight/data/master/births/US_births_2000-2014_SSA.csv'
+getData = function(url) {
+  var re = new XMLHttpRequest()
+  re.open('GET', url, false)
+  re.send(null)
+  return re.response
+}
+var data = d3.csvParse(getData(URL)).map(d=>{
+  d.births = +d.births
+  d.month = +d.month
+  d.day_of_week = +d.day_of_week
+  d.year = +d.year
+  return d
+})
+var DATA = new Ply(data)
+data
+
+%% md
+test div
+
+<div id='test1'></div>
+
+%% js
+const DEFAULTS = {
+  cellHeight: 185,
+  cellHeaderHeight: 30,
+  marginBottom: 20,
+}
+
+class SmallMultiple {
+  constructor(...originalArguments) {
+    this.currentCount = 0
+    this.args = Object.assign({}, DEFAULTS, originalArguments[0])
+    this.target = this.args.target
+    this.container = d3.select(this.target)
+    if (!this.args.height && (this.args.cols && this.args.rows)) {
+      this.args.height = this.args.rows * (this.args.cellHeight + this.args.marginBottom)
+    }
+    this.args.cellWidth = this.args.width / this.args.cols
+    if (this.args.clearFirst === true || this.args.clearFirst === undefined) this.container.selectAll('*').remove()
+    this.container
+    // .style('height', `${args.height - 35 * (args.rows-1)}px`)
+      .style('width', `${this.args.width}px`)
+      .style('max-width', `${this.args.width}px !important`)
+      .style('display', 'flex')
+      .style('justify-content', 'flex-start')
+      .style('flex-flow', 'row wrap')
+  }
+
+
+  blank() {
+    const cellName = `${this.args.label}-${this.currentCount}`
+    const cell = this.container.append('div').classed(cellName, true)
+    cell.style('width', `${this.args.cellWidth}px`)
+      .style('height', `${this.args.cellHeight}px`)
+      .style('margin-bottom', '20px')
+    this.currentCount += 1
+  }
+
+  plot(mgArgs) {
+    const firstCol = this.currentCount % this.args.cols === 0
+
+    const p = {
+      bottom: 30,
+      top: 30,
+      left: firstCol ? 35 : 0,
+      right: firstCol ? 35 : 35,
+    }
+
+    const { titleText } = mgArgs
+    const cellName = `${this.args.label}-${this.currentCount}`
+    const cell = this.container.append('div').classed(cellName, true)
+    cell.style('width', `${this.args.cellWidth}px`)
+      .style('height', `${this.args.cellHeight}px`)
+      .style('margin', '0px')
+      .style('margin-bottom', '20px')
+    const title = cell.append('div')
+    title.style('display', 'flex')
+      .style('justify-content', 'space-between')
+      .style('align-items', 'baseline')
+      .style('height', `${this.args.cellHeaderHeight}px`)
+      .style('width', `${this.args.cellWidth}px`)
+
+    title.append('div').html(titleText)
+      .style('font-weight', 'bold')
+      .style('margin-left', `${p.left}px`)
+      .style('font-size', '15px')
+    if (mgArgs.mainNumber) {
+      const mainDiv = title.append('div')
+      mainDiv
+        .style('margin-right', `${p.right}px`)
+        .style('text-align', 'right')
+        .style('font-size', '12px')
+        .html(d3.format('2,d')(mgArgs.mainNumber))
+    }
+
+
+    MG.data_graphic({
+      ...p,
+      ...mgArgs,
+      width: this.args.cellWidth,
+      height: this.args.cellHeight - this.args.cellHeaderHeight,
+      target: `.${cellName}`,
+
+    })
+    this.currentCount += 1
+  }
+}
+var SM = SmallMultiple
+
+%% js
+let byMonth = DATA.clear()
+	.group('year', 'month')
+	.reduce({births: Ply.sum('births'), year: arr=>arr[0].year})
+	.map(d=>{
+      d.year = new Date(`${d.year}-01-01`)
+      return d
+    })
+	.group('month')
+	.transform()
+
+
+let sm = new SM({
+  width: 800,
+  target: '#test1',
+  label: 'test',
+  cols: 4,
+  cellHeight: 150,
+  left:50
+})
+
+let months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+Object.keys(byMonth).forEach(month=>{
+  let theMonth = months[month-1]
+  let monthData = byMonth[month]
+  console.log(monthData, theMonth, month)
+  sm.plot({
+    titleText: theMonth,
+    mainNumber: Ply.mean('births')(monthData),
+    data: monthData,
+    x_accessor: 'year',
+    y_accessor: 'births',
+    xax_count: 2,
+    min_x: new Date('2000-01-01')
+  })
+})
+
+%% js
+</script>
+<div id='page'></div>
+<script src='https://iodide-project.github.io/master/iodide.master.js'></script>
+</body>
+</html>
