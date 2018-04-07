@@ -10,7 +10,7 @@
 %% meta
 {
   "title": "index",
-  "lastExport": "2018-04-07T17:20:51.454Z"
+  "lastExport": "2018-04-07T17:32:13.316Z"
 }
 
 %% md
@@ -52,6 +52,8 @@ const DEFAULTS = {
   cellHeight: 185,
   cellHeaderHeight: 30,
   marginBottom: 20,
+  left: 35,
+  right:20
 }
 
 class SmallMultiple {
@@ -90,8 +92,8 @@ class SmallMultiple {
     const p = {
       bottom: 30,
       top: 30,
-      left: firstCol ? 35 : 0,
-      right: firstCol ? 35 : 35,
+      left: firstCol ? DEFAULTS.left : 0,
+      right: DEFAULTS.right,
     }
 
     const { titleText } = mgArgs
@@ -121,15 +123,21 @@ class SmallMultiple {
         .html(d3.format('2,d')(mgArgs.mainNumber))
     }
 
-
     MG.data_graphic({
       ...p,
       ...mgArgs,
       width: this.args.cellWidth,
       height: this.args.cellHeight - this.args.cellHeaderHeight,
       target: `.${cellName}`,
-
     })
+    let smallerText = ['font-size', '10px !important']
+    let dg = d3.select(`.${cellName}`)//
+    
+    d3.selectAll(`.${cellName}`).selectAll('.small-multiple .mg-y-axis text').style(...smallerText)
+    d3.select(`.${cellName}`).selectAll('.small-multiple .mg-x-axis text').style(...smallerText)
+    d3.select(`.${cellName}`).selectAll('.small-multiple g.mg-active-datapoint-container tspan').style(...smallerText)
+    d3.select(`.${cellName}`).selectAll('.small-multiple .mg-line-legend-color').style(...smallerText)
+    d3.select(`.${cellName}`).selectAll('.small-multiple .mg-marker-text').style(...smallerText)
     this.currentCount += 1
   }
 }
