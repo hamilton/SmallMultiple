@@ -10,7 +10,8 @@
 %% meta
 {
   "title": "index",
-  "lastExport": "2018-04-07T17:32:13.316Z"
+  "lastSaved": "2018-04-08T16:12:22.696Z",
+  "lastExport": "2018-04-08T16:26:59.134Z"
 }
 
 %% md
@@ -25,22 +26,45 @@ https://cdnjs.cloudflare.com/ajax/libs/metrics-graphics/2.13.0/metricsgraphics.j
 https://raw.githubusercontent.com/hamilton/ply.js/master/dist/ply.js
 
 %% js
-let URL = 'https://raw.githubusercontent.com/fivethirtyeight/data/master/births/US_births_2000-2014_SSA.csv'
 getData = function(url) {
   var re = new XMLHttpRequest()
   re.open('GET', url, false)
   re.send(null)
   return re.response
 }
+let URL = 'https://gist.githubusercontent.com/hamilton/67d7904af5cd696ec2b12450b69bd657/raw/15d83f7f281c3e5de2ca3359529ef041b47fcbf6/css'
 var data = d3.csvParse(getData(URL)).map(d=>{
-  d.births = +d.births
-  d.month = +d.month
-  d.day_of_week = +d.day_of_week
-  d.year = +d.year
+  d.count = +d.count
+  d.date = new Date(d.date)
   return d
 })
 var DATA = new Ply(data)
 data
+
+%% css
+.small-multiple .mg-y-axis text {
+  font-size:10px;
+}
+
+.small-multiple .mg-x-axis text {
+  font-size:10px;
+}
+
+.small-multiple g.mg-active-datapoint-container tspan {
+  font-size:10px;
+}
+
+.small-multiple .mg-line-legend-color {
+  font-size:10px;
+}
+
+.small-multiple .mg-marker-text {
+  font-size:10px;
+}
+
+.small-multiple g.mg-active-datapoint-container {
+  transform: translate(0px, -10px);
+}
 
 %% md
 test div
@@ -49,11 +73,19 @@ test div
 
 %% js
 const DEFAULTS = {
-  cellHeight: 185,
+  cellHeight: null,
   cellHeaderHeight: 30,
   marginBottom: 20,
   left: 35,
-  right:20
+  leftOther: 10,
+  right: 0,//20,
+  top: 20,
+  buffer:10,
+  hideXAxes: true,
+  showOnlyFirstXAxis: false,
+  titleFontSize: 14,
+  secondTitleFontSize: 11,
+  titleTextAlign: 'left'
 }
 
 class SmallMultiple {
@@ -65,9 +97,18 @@ class SmallMultiple {
     if (!this.args.height && (this.args.cols && this.args.rows)) {
       this.args.height = this.args.rows * (this.args.cellHeight + this.args.marginBottom)
     }
-    this.args.cellWidth = this.args.width / this.args.cols
+    //this.args.cellWidth = (this.args.width - this.args.left) / this.args.cols 
+    this.args.cellBodyWidth = (this.args.width - this.args.left - this.args.cols * (this.args.right) - (this.args.cols-1)*this.args.leftOther) / this.args.cols
+    this.args.cellWidth = this.args.cellBodyWidth + this.args.leftOther + this.args.right
+    this.args.firstCellWidth = this.args.cellBodyWidth + this.args.left + this.args.right
+    console.log(this.args.cellWidth, this.args.firstCellWidth)
+    if (this.args.cellHeight === null) {
+      this.args.cellHeight = this.args.cellWidth
+    }
     if (this.args.clearFirst === true || this.args.clearFirst === undefined) this.container.selectAll('*').remove()
+    
     this.container
+    	.classed('small-multiple', true)
     // .style('height', `${args.height - 35 * (args.rows-1)}px`)
       .style('width', `${this.args.width}px`)
       .style('max-width', `${this.args.width}px !important`)
@@ -77,81 +118,73 @@ class SmallMultiple {
   }
 
 
-  blank() {
-    const cellName = `${this.args.label}-${this.currentCount}`
-    const cell = this.container.append('div').classed(cellName, true)
-    cell.style('width', `${this.args.cellWidth}px`)
-      .style('height', `${this.args.cellHeight}px`)
-      .style('margin-bottom', '20px')
-    this.currentCount += 1
-  }
+  // blank() {
+  //   const cellName = `${this.args.label}-${this.currentCount}`
+  //   const cell = this.container.append('div').classed(cellName, true)
+  //   cell.style('width', `${this.args.cellWidth}px`)
+  //     .style('height', `${this.args.cellHeight}px`)
+  //     .style('margin-bottom', '7px')
+  //   this.currentCount += 1
+  // }
 
   plot(mgArgs) {
     const firstCol = this.currentCount % this.args.cols === 0
-
+    let cellWidth = firstCol ? this.args.firstCellWidth : this.args.cellWidth
+	
     const p = {
       bottom: 30,
       top: 30,
-      left: firstCol ? DEFAULTS.left : 0,
+      left: firstCol ? this.args.left : this.args.leftOther,
       right: DEFAULTS.right,
     }
 
     const { titleText } = mgArgs
+    
     const cellName = `${this.args.label}-${this.currentCount}`
     const cell = this.container.append('div').classed(cellName, true)
-    cell.style('width', `${this.args.cellWidth}px`)
+    cell.style('width', `${cellWidth}px`)
       .style('height', `${this.args.cellHeight}px`)
       .style('margin', '0px')
-      .style('margin-bottom', '20px')
+      .style('margin-bottom', '7px')
     const title = cell.append('div')
-    title.style('display', 'flex')
+    title.style('display', mgArgs.mainNumber ? 'flex' : 'block')
       .style('justify-content', 'space-between')
       .style('align-items', 'baseline')
       .style('height', `${this.args.cellHeaderHeight}px`)
-      .style('width', `${this.args.cellWidth}px`)
+      .style('width', `${cellWidth}px`)
 
     title.append('div').html(titleText)
-      .style('font-weight', 'bold')
-      .style('margin-left', `${p.left}px`)
-      .style('font-size', '15px')
+      .style('margin-left', `${p.left + ((this.titleTextAlign ==='left') ? this.args.buffer : 0)}px`)
+      .style('font-size', `${this.args.titleFontSize}px`)
+      .style('text-align', this.args.titleTextAlign)
     if (mgArgs.mainNumber) {
       const mainDiv = title.append('div')
       mainDiv
-        .style('margin-right', `${p.right}px`)
+        .style('margin-right', `${p.right + this.args.buffer}px`)
         .style('text-align', 'right')
-        .style('font-size', '12px')
+        .style('font-size', `${this.args.secondTitleFontSize}px`)
         .html(d3.format('2,d')(mgArgs.mainNumber))
     }
 
     MG.data_graphic({
       ...p,
       ...mgArgs,
-      width: this.args.cellWidth,
+      width: cellWidth,
       height: this.args.cellHeight - this.args.cellHeaderHeight,
       target: `.${cellName}`,
     })
-    let smallerText = ['font-size', '10px !important']
-    let dg = d3.select(`.${cellName}`)//
-    
-    d3.selectAll(`.${cellName}`).selectAll('.small-multiple .mg-y-axis text').style(...smallerText)
-    d3.select(`.${cellName}`).selectAll('.small-multiple .mg-x-axis text').style(...smallerText)
-    d3.select(`.${cellName}`).selectAll('.small-multiple g.mg-active-datapoint-container tspan').style(...smallerText)
-    d3.select(`.${cellName}`).selectAll('.small-multiple .mg-line-legend-color').style(...smallerText)
-    d3.select(`.${cellName}`).selectAll('.small-multiple .mg-marker-text').style(...smallerText)
+	if ((!firstCol && this.args.hideXAxes) || (this.currentCount > 0 && this.args.showOnlyFirstXAxis)) {
+      d3.select(`.${cellName}`).select('.mg-y-axis').attr('opacity', 0)
+    }
+  
     this.currentCount += 1
   }
 }
 var SM = SmallMultiple
 
 %% js
-let byMonth = DATA.clear()
-	.group('year', 'month')
-	.reduce({births: Ply.sum('births'), year: arr=>arr[0].year})
-	.map(d=>{
-      d.year = new Date(`${d.year}-01-01`)
-      return d
-    })
-	.group('month')
+let byYear = DATA.clear()
+	.group('nbrhd')
 	.transform()
 
 
@@ -159,25 +192,38 @@ let sm = new SM({
   width: 800,
   target: '#test1',
   label: 'test',
-  cols: 4,
-  cellHeight: 150,
-  left:50
+  cols: 5,
+  left:50,
+  titleFontSize: 12,
+  showOnlyFirstXAxis: true,
+  titleTextAlign:'center'
 })
 
-let months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+let neighborhoods = Object.keys(byYear).map(d=>{
+  let sum = Ply.sum('count')(byYear[d])
+  return [sum, d]
+})
+neighborhoods.sort((a,b)=>{
+  return b[0] - a[0]
+})
+neighborhoods = neighborhoods.map(d=>d[1]).slice(0,15)
+//let months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
-Object.keys(byMonth).forEach(month=>{
-  let theMonth = months[month-1]
-  let monthData = byMonth[month]
-  console.log(monthData, theMonth, month)
+let maxY = Math.max(...neighborhoods.map(d=> Math.max(...byYear[d].map(di=>di.count))  )) * 1.1
+
+neighborhoods.forEach(neighborhood=>{
+  let yearData = byYear[neighborhood]
   sm.plot({
-    titleText: theMonth,
-    mainNumber: Ply.mean('births')(monthData),
-    data: monthData,
-    x_accessor: 'year',
-    y_accessor: 'births',
-    xax_count: 2,
-    min_x: new Date('2000-01-01')
+    titleText: neighborhood,
+    //mainNumber: Ply.sum('count')(yearData),
+    data: yearData,
+    x_accessor: 'date',
+    y_accessor: 'count',
+    xax_count:3,
+    max_y: maxY,
+    area: false,
+    min_x: new Date('1996-12-31'),
+
   })
 })
 
